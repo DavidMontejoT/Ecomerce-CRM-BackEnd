@@ -13,7 +13,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000", "https://esmeraldas-frontend.onrender.com"})
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000", "https://esmeraldas-frontend.onrender.com", "https://ecomerce-frontend-crm.onrender.com"})
 public class ProductController {
 
     private final ProductService productService;
