@@ -2,6 +2,10 @@ package com.esmeraldas.backend.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -23,6 +27,9 @@ public class ImageService {
 
     @Value("${app.api.base-url:https://ecomerce-backend-crm.onrender.com}")
     private String apiBaseUrl;
+
+    @Value("${whatsapp.access.token}")
+    private String whatsappAccessToken;
 
     /**
      * Descarga una imagen desde una URL y la guarda localmente
@@ -46,8 +53,14 @@ public class ImageService {
             String filename = "product_" + productId + "_" + UUID.randomUUID().toString().substring(0, 8) + extension;
             Path targetPath = uploadPath.resolve(filename);
 
-            // Descargar imagen
-            byte[] imageBytes = restTemplate.getForObject(imageUrl, byte[].class);
+            // Descargar imagen CON autenticación de WhatsApp
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(whatsappAccessToken);
+
+            HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+            ResponseEntity<byte[]> response = restTemplate.exchange(imageUrl, HttpMethod.GET, requestEntity, byte[].class);
+
+            byte[] imageBytes = response.getBody();
             if (imageBytes == null || imageBytes.length == 0) {
                 throw new RuntimeException("No se pudo descargar la imagen desde WhatsApp");
             }
