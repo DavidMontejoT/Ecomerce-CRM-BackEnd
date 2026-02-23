@@ -102,15 +102,32 @@ public class WhatsAppService {
             return getWelcomeMessage();
         }
 
-        if (text.contains("producto") || text.contains("subir") || text.contains("agregar")) {
+        // Upload product command
+        if (text.contains("subir") || text.contains("agregar")) {
             ConversationState newState = new ConversationState();
             newState.setStep(1);
+            newState.setAction("upload");
             conversationStates.put(from, newState);
             return "📱 *Subir nuevo producto*\n\n" +
                    "Por favor, envíame la siguiente información:\n\n" +
                    "1️⃣ **Nombre del producto**\n" +
                    "Ejemplo: Esmeralda Colombiana 2ct\n\n" +
                    "Responde con el nombre del producto.";
+        }
+
+        // Edit product command
+        if (text.contains("editar") || text.contains("modificar")) {
+            return listProductsForEdit(from);
+        }
+
+        // Delete product command
+        if (text.contains("borrar") || text.contains("eliminar")) {
+            return listProductsForDelete(from);
+        }
+
+        // View products command
+        if (text.contains("ver") && text.contains("producto")) {
+            return listAllProducts();
         }
 
         // Process based on conversation state
@@ -220,6 +237,12 @@ public class WhatsAppService {
                 }
 
             default:
+                // Handle edit and delete flows
+                if ("edit".equals(state.getAction())) {
+                    return handleEditFlow(from, text, state);
+                } else if ("delete".equals(state.getAction())) {
+                    return handleDeleteFlow(from, text, state);
+                }
                 return getWelcomeMessage();
         }
     }
@@ -228,6 +251,8 @@ public class WhatsAppService {
         return "👋 *Bienvenido a Esmeraldas Victory*\n\n" +
                "Comandos disponibles:\n\n" +
                "📦 *Subir producto* - Agregar un nuevo producto al catálogo\n" +
+               "✏️ *Editar producto* - Modificar un producto existente\n" +
+               "🗑️ *Borrar producto* - Eliminar un producto del catálogo\n" +
                "📋 *Ver productos* - Listar todos los productos\n" +
                "❓ *Ayuda* - Ver esta ayuda\n\n" +
                "Escribe un comando para comenzar.";
@@ -282,18 +307,303 @@ public class WhatsAppService {
         return null;
     }
 
+    // Helper methods for edit and delete operations
+
+    private String listProductsForEdit(String from) {
+        try {
+            StringBuilder productList = new StringBuilder("✏️ *Editar Producto*\n\n");
+            productList.append("Productos disponibles:\n\n");
+
+            java.util.List<Product> products = productRepository.findAll();
+            if (products.isEmpty()) {
+                return "📭 No hay productos disponibles. Primero agrega un producto con 'subir producto'.";
+            }
+
+            for (Product p : products) {
+                productList.append("*ID ").append(p.getId()).append("*: ").append(p.getName())
+                           .append("\n💰 Precio: $").append(p.getPrice())
+                           .append("\n\n");
+            }
+
+            productList.append("Responde con el **ID** del producto que quieres editar.");
+
+            // Set state for editing
+            ConversationState state = new ConversationState();
+            state.setStep(10); // Step 10 = waiting for product ID to edit
+            state.setAction("edit");
+            conversationStates.put(from, state);
+
+            return productList.toString();
+        } catch (Exception e) {
+            log.error("Error listing products for edit", e);
+            return "❌ Error al listar productos. Intenta nuevamente.";
+        }
+    }
+
+    private String listProductsForDelete(String from) {
+        try {
+            StringBuilder productList = new StringBuilder("🗑️ *Borrar Producto*\n\n");
+            productList.append("Productos disponibles:\n\n");
+
+            java.util.List<Product> products = productRepository.findAll();
+            if (products.isEmpty()) {
+                return "📭 No hay productos disponibles.";
+            }
+
+            for (Product p : products) {
+                productList.append("*ID ").append(p.getId()).append("*: ").append(p.getName())
+                           .append("\n💰 Precio: $").append(p.getPrice())
+                           .append("\n\n");
+            }
+
+            productList.append("Responde con el **ID** del producto que quieres borrar.");
+
+            // Set state for deleting
+            ConversationState state = new ConversationState();
+            state.setStep(20); // Step 20 = waiting for product ID to delete
+            state.setAction("delete");
+            conversationStates.put(from, state);
+
+            return productList.toString();
+        } catch (Exception e) {
+            log.error("Error listing products for delete", e);
+            return "❌ Error al listar productos. Intenta nuevamente.";
+        }
+    }
+
+    private String listAllProducts() {
+        try {
+            StringBuilder productList = new StringBuilder("📋 *Catálogo de Productos*\n\n");
+
+            java.util.List<Product> products = productRepository.findAll();
+            if (products.isEmpty()) {
+                return "📭 No hay productos disponibles en el catálogo.";
+            }
+
+            for (Product p : products) {
+                productList.append("━━━━━━━━━━━━━━━━\n");
+                productList.append("*").append(p.getName()).append("*\n");
+                productList.append("💰 Precio: $").append(p.getPrice()).append("\n");
+                if (p.getDescription() != null && !p.getDescription().isEmpty()) {
+                    productList.append("📝 ").append(p.getDescription()).append("\n");
+                }
+                if (p.getCategory() != null && !p.getCategory().isEmpty()) {
+                    productList.append("🏷️ Categoría: ").append(p.getCategory()).append("\n");
+                }
+                productList.append("🆔 ID: ").append(p.getId()).append("\n");
+                productList.append("━━━━━━━━━━━━━━━━\n\n");
+            }
+
+            productList.append("💡 Para editar o borrar, usa los comandos:");
+            productList.append("\n✏️ 'editar producto'\n🗑️ 'borrar producto'");
+
+            return productList.toString();
+        } catch (Exception e) {
+            log.error("Error listing products", e);
+            return "❌ Error al listar productos. Intenta nuevamente.";
+        }
+    }
+
+    private String handleEditFlow(String from, String text, ConversationState state) {
+        try {
+            switch (state.getStep()) {
+                case 10: // Waiting for product ID
+                    try {
+                        Long productId = Long.parseLong(text.trim());
+                        Product product = productRepository.findById(productId).orElse(null);
+
+                        if (product == null) {
+                            return "❌ Producto no encontrado. Responde con un ID válido o escribe 'ayuda'.";
+                        }
+
+                        state.setProductId(productId);
+                        state.setStep(11);
+
+                        return "✅ Producto seleccionado: *" + product.getName() + "*\n\n" +
+                               "¿Qué campo quieres editar?\n\n" +
+                               "1️⃣ Nombre\n" +
+                               "2️⃣ Descripción\n" +
+                               "3️⃣ Precio\n" +
+                               "4️⃣ Categoría\n" +
+                               "5️⃣ Número de WhatsApp\n\n" +
+                               "Responde con el número de la opción (1-5).";
+
+                    } catch (NumberFormatException e) {
+                        return "❌ ID inválido. Responde con un número (ejemplo: 1)";
+                    }
+
+                case 11: // Waiting for field selection
+                    String field = null;
+                    switch (text.trim()) {
+                        case "1": field = "name"; break;
+                        case "2": field = "description"; break;
+                        case "3": field = "price"; break;
+                        case "4": field = "category"; break;
+                        case "5": field = "whatsappNumber"; break;
+                        default:
+                            return "❌ Opción inválida. Responde con un número del 1 al 5.";
+                    }
+
+                    state.setFieldToEdit(field);
+                    state.setStep(12);
+
+                    String prompt = "";
+                    switch (field) {
+                        case "name":
+                            prompt = "Responde con el nuevo **nombre** del producto:";
+                            break;
+                        case "description":
+                            prompt = "Responde con la nueva **descripción** del producto:";
+                            break;
+                        case "price":
+                            prompt = "Responde con el nuevo **precio** (solo números, ejemplo: 2500):";
+                            break;
+                        case "category":
+                            prompt = "Responde con la nueva **categoría** (o escribe 'omitir'):";
+                            break;
+                        case "whatsappNumber":
+                            prompt = "Responde con el nuevo **número de WhatsApp** (ejemplo: +573001234567):";
+                            break;
+                    }
+
+                    return "✅ Campo seleccionado\n\n" + prompt;
+
+                case 12: // Waiting for new value
+                    Product product = productRepository.findById(state.getProductId()).orElse(null);
+                    if (product == null) {
+                        conversationStates.remove(from);
+                        return "❌ Producto no encontrado. El flujo se ha cancelado.";
+                    }
+
+                    try {
+                        switch (state.getFieldToEdit()) {
+                            case "name":
+                                product.setName(text);
+                                break;
+                            case "description":
+                                product.setDescription(text);
+                                break;
+                            case "price":
+                                BigDecimal newPrice = new BigDecimal(text.replaceAll("[^0-9.]", ""));
+                                product.setPrice(newPrice);
+                                break;
+                            case "category":
+                                product.setCategory(text.equalsIgnoreCase("omitir") ? "Sin categoría" : text);
+                                break;
+                            case "whatsappNumber":
+                                product.setWhatsappNumber(text);
+                                break;
+                        }
+
+                        productRepository.save(product);
+                        conversationStates.remove(from);
+
+                        return "✅ *Producto actualizado exitosamente!*\n\n" +
+                               "📦 **" + product.getName() + "**\n" +
+                               "💰 Precio: $" + product.getPrice() + "\n\n" +
+                               "Para continuar, puedes:\n" +
+                               "• Editar otro producto: 'editar producto'\n" +
+                               "• Ver catálogo: 'ver productos'\n" +
+                               "• Subir nuevo producto: 'subir producto'";
+
+                    } catch (Exception e) {
+                        conversationStates.remove(from);
+                        return "❌ Error al actualizar el producto: " + e.getMessage() + "\n\n" +
+                               "Para intentar de nuevo, escribe 'editar producto'.";
+                    }
+
+                default:
+                    return getWelcomeMessage();
+            }
+        } catch (Exception e) {
+            log.error("Error in edit flow", e);
+            conversationStates.remove(from);
+            return "❌ Error en el flujo de edición. Intenta nuevamente con 'editar producto'.";
+        }
+    }
+
+    private String handleDeleteFlow(String from, String text, ConversationState state) {
+        try {
+            switch (state.getStep()) {
+                case 20: // Waiting for product ID
+                    try {
+                        Long productId = Long.parseLong(text.trim());
+                        Product product = productRepository.findById(productId).orElse(null);
+
+                        if (product == null) {
+                            return "❌ Producto no encontrado. Responde con un ID válido o escribe 'ayuda'.";
+                        }
+
+                        state.setProductId(productId);
+                        state.setStep(21);
+
+                        return "⚠️ *Confirmar eliminación*\n\n" +
+                               "¿Estás seguro de que quieres borrar este producto?\n\n" +
+                               "📦 *" + product.getName() + "*\n" +
+                               "💰 Precio: $" + product.getPrice() + "\n\n" +
+                               "Responde:\n" +
+                               "✅ **'sí'** para confirmar\n" +
+                               "❌ **'no'** para cancelar";
+
+                    } catch (NumberFormatException e) {
+                        return "❌ ID inválido. Responde con un número (ejemplo: 1)";
+                    }
+
+                case 21: // Waiting for confirmation
+                    if (text.equalsIgnoreCase("si") || text.equalsIgnoreCase("sí") || text.equalsIgnoreCase("yes")) {
+                        Product product = productRepository.findById(state.getProductId()).orElse(null);
+                        if (product != null) {
+                            productRepository.delete(product);
+                            conversationStates.remove(from);
+
+                            return "✅ *Producto borrado exitosamente!*\n\n" +
+                                   "El producto ha sido eliminado del catálogo.\n\n" +
+                                   "Para continuar:\n" +
+                                   "• Ver catálogo: 'ver productos'\n" +
+                                   "• Subir nuevo producto: 'subir producto'";
+                        } else {
+                            conversationStates.remove(from);
+                            return "❌ Producto no encontrado. El flujo se ha cancelado.";
+                        }
+                    } else if (text.equalsIgnoreCase("no") || text.equalsIgnoreCase("cancelar")) {
+                        conversationStates.remove(from);
+                        return "❌ *Eliminación cancelada*\n\n" +
+                               "El producto no ha sido borrado.\n\n" +
+                               "Para volver al inicio, escribe 'ayuda'.";
+                    } else {
+                        return "❌ Respuesta no reconocida.\n\n" +
+                               "Responde:\n" +
+                               "✅ **'sí'** para confirmar la eliminación\n" +
+                               "❌ **'no'** para cancelar";
+                    }
+
+                default:
+                    return getWelcomeMessage();
+            }
+        } catch (Exception e) {
+            log.error("Error in delete flow", e);
+            conversationStates.remove(from);
+            return "❌ Error en el flujo de eliminación. Intenta nuevamente con 'borrar producto'.";
+        }
+    }
+
     // Inner class to track conversation state
     private static class ConversationState {
         private int step = 0;
+        private String action; // upload, edit, delete
         private String name;
         private String description;
         private BigDecimal price;
         private String category;
         private String whatsappNumber;
         private String imageUrl;
+        private Long productId; // For edit/delete operations
+        private String fieldToEdit; // Which field to edit
 
         public int getStep() { return step; }
         public void setStep(int step) { this.step = step; }
+        public String getAction() { return action; }
+        public void setAction(String action) { this.action = action; }
         public String getName() { return name; }
         public void setName(String name) { this.name = name; }
         public String getDescription() { return description; }
@@ -306,5 +616,9 @@ public class WhatsAppService {
         public void setWhatsappNumber(String whatsappNumber) { this.whatsappNumber = whatsappNumber; }
         public String getImageUrl() { return imageUrl; }
         public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+        public Long getProductId() { return productId; }
+        public void setProductId(Long productId) { this.productId = productId; }
+        public String getFieldToEdit() { return fieldToEdit; }
+        public void setFieldToEdit(String fieldToEdit) { this.fieldToEdit = fieldToEdit; }
     }
 }
