@@ -239,7 +239,7 @@ public class WhatsAppService {
             default:
                 // Handle edit and delete flows
                 if ("edit".equals(state.getAction())) {
-                    return handleEditFlow(from, text, state);
+                    return handleEditFlow(from, text, state, image);
                 } else if ("delete".equals(state.getAction())) {
                     return handleDeleteFlow(from, text, state);
                 }
@@ -404,7 +404,7 @@ public class WhatsAppService {
         }
     }
 
-    private String handleEditFlow(String from, String text, ConversationState state) {
+    private String handleEditFlow(String from, String text, ConversationState state, JsonNode image) {
         try {
             switch (state.getStep()) {
                 case 10: // Waiting for product ID
@@ -476,90 +476,94 @@ public class WhatsAppService {
                     return "✅ Campo seleccionado\n\n" + prompt;
 
                 case 12: // Waiting for new value
-                    Product product = productRepository.findById(state.getProductId()).orElse(null);
-                    if (product == null) {
-                        conversationStates.remove(from);
-                        return "❌ Producto no encontrado. El flujo se ha cancelado.";
-                    }
-
-                    try {
-                        switch (state.getFieldToEdit()) {
-                            case "name":
-                                product.setName(text);
-                                break;
-                            case "description":
-                                product.setDescription(text);
-                                break;
-                            case "price":
-                                BigDecimal newPrice = new BigDecimal(text.replaceAll("[^0-9.]", ""));
-                                product.setPrice(newPrice);
-                                break;
-                            case "category":
-                                product.setCategory(text.equalsIgnoreCase("omitir") ? "Sin categoría" : text);
-                                break;
-                            case "whatsappNumber":
-                                product.setWhatsappNumber(text);
-                                break;
+                    {
+                        Product product = productRepository.findById(state.getProductId()).orElse(null);
+                        if (product == null) {
+                            conversationStates.remove(from);
+                            return "❌ Producto no encontrado. El flujo se ha cancelado.";
                         }
 
-                        productRepository.save(product);
-                        conversationStates.remove(from);
-
-                        return "✅ *Producto actualizado exitosamente!*\n\n" +
-                               "📦 **" + product.getName() + "**\n" +
-                               "💰 Precio: $" + product.getPrice() + "\n\n" +
-                               "Para continuar, puedes:\n" +
-                               "• Editar otro producto: 'editar producto'\n" +
-                               "• Ver catálogo: 'ver productos'\n" +
-                               "• Subir nuevo producto: 'subir producto'";
-
-                    } catch (Exception e) {
-                        conversationStates.remove(from);
-                        return "❌ Error al actualizar el producto: " + e.getMessage() + "\n\n" +
-                               "Para intentar de nuevo, escribe 'editar producto'.";
-                    }
-
-                case 13: // Waiting for new image
-                    if (image != null && !image.isEmpty()) {
-                        String tempImageUrl = image.path("url").asText();
-                        log.info("Nueva imagen recibida de WhatsApp para edición, URL temporal: {}", tempImageUrl);
-
                         try {
-                            Product product = productRepository.findById(state.getProductId()).orElse(null);
-                            if (product == null) {
-                                conversationStates.remove(from);
-                                return "❌ Producto no encontrado. El flujo se ha cancelado.";
+                            switch (state.getFieldToEdit()) {
+                                case "name":
+                                    product.setName(text);
+                                    break;
+                                case "description":
+                                    product.setDescription(text);
+                                    break;
+                                case "price":
+                                    BigDecimal newPrice = new BigDecimal(text.replaceAll("[^0-9.]", ""));
+                                    product.setPrice(newPrice);
+                                    break;
+                                case "category":
+                                    product.setCategory(text.equalsIgnoreCase("omitir") ? "Sin categoría" : text);
+                                    break;
+                                case "whatsappNumber":
+                                    product.setWhatsappNumber(text);
+                                    break;
                             }
 
-                            // Download and save new image from WhatsApp
-                            String permanentImageUrl = imageService.downloadAndSaveImage(tempImageUrl, product.getId());
-                            log.info("Nueva imagen descargada y guardada: {}", permanentImageUrl);
-
-                            // Update product with new image URL
-                            product.setImageUrl(permanentImageUrl);
                             productRepository.save(product);
-                            log.info("Producto actualizado con nueva imagen");
-
                             conversationStates.remove(from);
 
-                            return "✅ *Imagen actualizada exitosamente!*\n\n" +
+                            return "✅ *Producto actualizado exitosamente!*\n\n" +
                                    "📦 **" + product.getName() + "**\n" +
-                                   "💰 Precio: $" + product.getPrice() + "\n" +
-                                   "📷 Nueva imagen descargada y guardada\n\n" +
+                                   "💰 Precio: $" + product.getPrice() + "\n\n" +
                                    "Para continuar, puedes:\n" +
-                                   "• Editar otro campo: 'editar producto'\n" +
+                                   "• Editar otro producto: 'editar producto'\n" +
                                    "• Ver catálogo: 'ver productos'\n" +
                                    "• Subir nuevo producto: 'subir producto'";
 
                         } catch (Exception e) {
-                            log.error("Error procesando nueva imagen", e);
                             conversationStates.remove(from);
-                            return "❌ Hubo un error al procesar la nueva imagen. Por favor, intenta nuevamente escribiendo 'editar producto'.\n\n" +
-                                   "Error: " + e.getMessage();
+                            return "❌ Error al actualizar el producto: " + e.getMessage() + "\n\n" +
+                                   "Para intentar de nuevo, escribe 'editar producto'.";
                         }
-                    } else {
-                        return "❌ Por favor, envía una imagen.\n\n" +
-                               "Si no quieres cambiar la imagen, escribe 'cancelar' para volver al menú principal.";
+                    }
+
+                case 13: // Waiting for new image
+                    {
+                        if (image != null && !image.isEmpty()) {
+                            String tempImageUrl = image.path("url").asText();
+                            log.info("Nueva imagen recibida de WhatsApp para edición, URL temporal: {}", tempImageUrl);
+
+                            try {
+                                Product product = productRepository.findById(state.getProductId()).orElse(null);
+                                if (product == null) {
+                                    conversationStates.remove(from);
+                                    return "❌ Producto no encontrado. El flujo se ha cancelado.";
+                                }
+
+                                // Download and save new image from WhatsApp
+                                String permanentImageUrl = imageService.downloadAndSaveImage(tempImageUrl, product.getId());
+                                log.info("Nueva imagen descargada y guardada: {}", permanentImageUrl);
+
+                                // Update product with new image URL
+                                product.setImageUrl(permanentImageUrl);
+                                productRepository.save(product);
+                                log.info("Producto actualizado con nueva imagen");
+
+                                conversationStates.remove(from);
+
+                                return "✅ *Imagen actualizada exitosamente!*\n\n" +
+                                       "📦 **" + product.getName() + "**\n" +
+                                       "💰 Precio: $" + product.getPrice() + "\n" +
+                                       "📷 Nueva imagen descargada y guardada\n\n" +
+                                       "Para continuar, puedes:\n" +
+                                       "• Editar otro campo: 'editar producto'\n" +
+                                       "• Ver catálogo: 'ver productos'\n" +
+                                       "• Subir nuevo producto: 'subir producto'";
+
+                            } catch (Exception e) {
+                                log.error("Error procesando nueva imagen", e);
+                                conversationStates.remove(from);
+                                return "❌ Hubo un error al procesar la nueva imagen. Por favor, intenta nuevamente escribiendo 'editar producto'.\n\n" +
+                                       "Error: " + e.getMessage();
+                            }
+                        } else {
+                            return "❌ Por favor, envía una imagen.\n\n" +
+                                   "Si no quieres cambiar la imagen, escribe 'cancelar' para volver al menú principal.";
+                        }
                     }
 
                 default:
