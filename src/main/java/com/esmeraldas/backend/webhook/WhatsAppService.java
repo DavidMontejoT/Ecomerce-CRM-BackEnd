@@ -5,6 +5,7 @@ import com.esmeraldas.backend.repository.ProductRepository;
 import com.esmeraldas.backend.service.ImageService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -240,18 +241,27 @@ public class WhatsAppService {
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.setBearerAuth(accessToken);
 
-            String requestBody = String.format(
-                "{\"messaging_product\": \"whatsapp\", \"recipient_type\": \"individual\", \"to\": \"%s\", \"type\": \"text\", \"text\": {\"body\": \"%s\"}}",
-                to, text.replace("\"", "\\\"")
-            );
+            // Build JSON using ObjectMapper to avoid escaping issues
+            ObjectNode requestBody = objectMapper.createObjectNode();
+            requestBody.put("messaging_product", "whatsapp");
+            requestBody.put("recipient_type", "individual");
+            requestBody.put("to", to);
+            requestBody.put("type", "text");
 
-            HttpEntity<String> request = new HttpEntity<>(requestBody, headers);
-            restTemplate.postForObject(url, request, String.class);
+            ObjectNode textNode = objectMapper.createObjectNode();
+            textNode.put("body", text);
+            requestBody.set("text", textNode);
 
-            log.info("Message sent to {}: {}", to, text);
+            String jsonBody = objectMapper.writeValueAsString(requestBody);
+            log.info("Sending WhatsApp message to {}: {}", to, jsonBody);
+
+            HttpEntity<String> request = new HttpEntity<>(jsonBody, headers);
+            String response = restTemplate.postForObject(url, request, String.class);
+
+            log.info("Message sent successfully to {}: {}", to, response);
 
         } catch (Exception e) {
-            log.error("Error sending WhatsApp message", e);
+            log.error("Error sending WhatsApp message to {}", to, e);
         }
     }
 
