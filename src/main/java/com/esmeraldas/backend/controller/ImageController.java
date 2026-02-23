@@ -26,7 +26,7 @@ public class ImageController {
     public ResponseEntity<Resource> getImage(@PathVariable String filename) {
         try {
             Path imagePath = Paths.get(uploadDir).resolve(filename);
-            Resource resource = org.springframework.core.io.FileSystemResource.createResource(imagePath.toFile());
+            Resource resource = new org.springframework.core.io.FileSystemResource(imagePath.toFile());
 
             if (!resource.exists()) {
                 return ResponseEntity.notFound().build();
