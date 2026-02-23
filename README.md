@@ -1,165 +1,392 @@
-# Esmeraldas Backend
+# Victory Esmeraldas - Backend API
 
-Backend del e-commerce de Esmeraldas con integración de WhatsApp Cloud API.
+## 📋 Descripción General
 
-## Tecnologías
+Sistema backend para e-commerce de venta de esmeraldas colombianas. Construido con Spring Boot 3.2 y PostgreSQL, ofrece una API REST robusta con integración a WhatsApp Cloud API para gestión automatizada de productos.
 
-- Spring Boot 3.2.0
-- PostgreSQL
-- JPA/Hibernate
-- WhatsApp Cloud API
-- Maven
+## 🎯 Objetivos del Proyecto
 
-## Configuración de Base de Datos
+1. **Comercio Electrónico Premium**: Plataforma especializada en venta de esmeraldas colombianas de alta calidad
+2. **Gestión de Inventario**: Sistema CRUD completo para administración de catálogo de productos
+3. **Integración WhatsApp**: Chatbot inteligente para agregar productos mediante conversación natural
+4. **Arquitectura Cloud-Native**: Sistema preparado para escalabilidad y producción en plataforma serverless
+5. **API RESTful**: Interfaz moderna y optimizada para frontend React
+6. **Experiencia de Usuario**: Respuesta rápida y confiable para excelente UX
 
-### Opción 1: PostgreSQL Local
+## 🏗️ Arquitectura Tecnológica
 
-1. Instala PostgreSQL: `brew install postgresql` (Mac)
-2. Inicia PostgreSQL: `brew services start postgresql`
-3. Crea la base de datos:
-```bash
-psql postgres
-CREATE DATABASE esmeraldas_db;
-CREATE USER esmeraldas_user WITH PASSWORD 'esmeraldas_pass';
-GRANT ALL PRIVILEGES ON DATABASE esmeraldas_db TO esmeraldas_user;
-\q
+### Stack Tecnológico
+
+| Componente | Tecnología | Versión | Propósito |
+|------------|------------|---------|-----------|
+| Backend Framework | Spring Boot | 3.2.0 | Marco principal |
+| Lenguaje | Java | 17 LTS | Desarrollo |
+| Build Tool | Maven | - | Gestión de dependencias |
+| Database | PostgreSQL | 14+ | Persistencia de datos |
+| ORM | Hibernate/JPA | - | Mapeo objeto-relacional |
+| API Integration | WhatsApp Cloud API | v18.0 | Mensajería |
+| Deployment | Docker | - | Contenerización |
+| Cloud Platform | Render | - | Hosting producción |
+
+### Patrón Arquitectónico
+
+- **Arquitectura en Capas**: Controller → Service → Repository → Entity
+- **Inyección de Dependencias**: Constructor-based con Spring
+- **Configuración Externa**: Environment variables para seguridad
+- **API REST**: Recursos RESTful con HTTP semántico
+
+## 📁 Estructura del Proyecto
+
+```
+src/main/java/com/esmeraldas/backend/
+├── EsmeraldasBackendApplication.java  # Clase principal
+├── config/                             # Configuraciones Spring
+│   └── CorsConfig.java                 # Configuración CORS
+├── controller/                         # Controladores REST
+│   ├── ProductController.java          # API Productos
+│   └── WhatsAppWebhookController.java  # Webhook WhatsApp
+├── dto/                                # Data Transfer Objects
+│   ├── WhatsAppMessageDto.java         # Mensajes WhatsApp
+│   └── WhatsAppResponse.java           # Respuestas API
+├── entity/                             # Entidades JPA
+│   └── Product.java                    # Modelo Producto
+├── repository/                         # Repositorios Spring Data
+│   └── ProductRepository.java          # Datos Productos
+├── service/                            # Lógica de Negocio
+│   └── ProductService.java             # Servicios Productos
+└── webhook/                            # Servicios WhatsApp
+    └── WhatsAppService.java            # Lógica Chatbot
+
+src/main/resources/
+├── application.properties              # Configuración app
+└── logback.xml                        # Logging (opcional)
 ```
 
-### Opción 2: Supabase (Recomendado - Gratis)
-
-1. Ve a [supabase.com](https://supabase.com)
-2. Crea un proyecto nuevo
-3. Ve a Settings > Database
-4. Copia la **Connection String** JDBC
-5. Actualiza `application.properties`:
-
-```properties
-spring.datasource.url=jdbc:postgresql://YOUR_PROJECT.supabase.co:5432/postgres
-spring.datasource.username=postgres
-spring.datasource.password=YOUR_PASSWORD
-```
-
-### Opción 3: ElephantSQL (Gratis)
-
-1. Ve a [elephantsql.com](https://www.elephantsql.com)
-2. Crea una instancia gratuita
-3. Copia la URL de conexión
-4. Actualiza `application.properties`
-
-## Ejecutar el Proyecto
-
-```bash
-cd backend
-
-# Con Maven
-mvn clean install
-mvn spring-boot:run
-```
-
-El backend estará disponible en: `http://localhost:8080`
-
-## API Endpoints
+## 🔌 Endpoints API
 
 ### Productos
 
-- `GET /api/products` - Listar todos los productos
-- `GET /api/products/{id}` - Obtener producto por ID
-- `POST /api/products` - Crear producto
-- `PUT /api/products/{id}` - Actualizar producto
-- `DELETE /api/products/{id}` - Eliminar producto
-- `GET /api/products/search?keyword=xxx` - Buscar productos
-- `GET /api/products/category/{category}` - Filtrar por categoría
+| Método | Endpoint | Descripción | Response |
+|--------|----------|-------------|----------|
+| GET | `/api/products` | Listar productos disponibles | 200 OK |
+| GET | `/api/products/{id}` | Obtener producto por ID | 200 OK / 404 |
+| POST | `/api/products` | Crear nuevo producto | 201 Created |
+| PUT | `/api/products/{id}` | Actualizar producto | 200 OK / 404 |
+| DELETE | `/api/products/{id}` | Eliminar producto | 204 No Content |
+| GET | `/api/products/search?keyword=` | Buscar productos | 200 OK |
+| GET | `/api/products/category/{category}` | Filtrar por categoría | 200 OK |
 
-### Webhook de WhatsApp
+### WhatsApp Webhook
 
-- `GET /webhook` - Verificación de webhook
-- `POST /webhook` - Recepción de mensajes de WhatsApp
-- `GET /webhook/test` - Test endpoint
-- `GET /webhook/health` - Health check
+| Método | Endpoint | Descripción | Uso |
+|--------|----------|-------------|-----|
+| GET | `/webhook` | Verificación de webhook | Meta verify |
+| POST | `/webhook` | Recepción de mensajes | Chatbot |
+| GET | `/webhook/test` | Test de conectividad | Diagnóstico |
+| GET | `/webhook/health` | Health check | Monitoreo |
 
-## Configuración de WhatsApp Cloud API
+### Sistema
 
-### 1. Crear App en Meta for Developers
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/` | Información del sistema | Status |
 
-1. Ve a [developers.facebook.com](https://developers.facebook.com)
-2. Crea una nueva app > **Business** type
-3. Agrega el producto **WhatsApp**
+## 📊 Modelo de Datos
 
-### 2. Configurar Webhook
+### Entity: Product
 
-1. En WhatsApp > Configuration, haz clic en "Edit" en Webhooks
-2. Callback URL: `https://tu-backend-url.com/webhook`
-3. Verify Token: Genera uno seguro y guárdalo
-4. Suscríbete a los eventos:
-   - `messages`
-   - `messaging_postbacks`
+```java
+@Entity
+@Table(name = "products")
+public class Product {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-### 3. Obtener Credenciales
-
-1. Ve a WhatsApp > API Setup
-2. Copia:
-   - **Phone Number ID**
-   - **Access Token** (con permisos de lectura y envío)
-
-### 4. Actualizar application.properties
-
-```properties
-whatsapp.phone.number.id=YOUR_PHONE_NUMBER_ID
-whatsapp.access.token=YOUR_ACCESS_TOKEN
-whatsapp.verify.token=YOUR_VERIFY_TOKEN
+    private String name;                    // Nombre del producto
+    private String description;             // Descripción detallada
+    private BigDecimal price;               // Precio en USD
+    private String imageUrl;                // URL de imagen
+    private String category;                // Categoría (Anillo, Collar, etc.)
+    private Integer stock;                  // Inventario
+    private Boolean available;              // Disponibilidad
+    private String whatsappNumber;          // Contacto WhatsApp
+    private LocalDateTime createdAt;         // Fecha creación
+    private LocalDateTime updatedAt;         // Última actualización
+}
 ```
 
-### 5. Probar el Webhook
+### Relaciones
 
-1. Inicia el backend localmente
-2. Usa ngrok para exponer tu localhost: `ngrok http 8080`
-3. Configura el webhook con la URL de ngrok
-4. Envía un mensaje desde WhatsApp al número de prueba
+- **Sin relaciones complejas** (Sistema simple actual)
+- **Escalable** para agregar: Users, Orders, Invoices (futuro)
 
-## Estructura del Proyecto
+## 🔐 Configuración de Seguridad
 
-```
-backend/
-├── src/main/java/com/esmeraldas/backend/
-│   ├── entity/           # Entidades JPA
-│   ├── repository/       # Repositorios JPA
-│   ├── service/          # Lógica de negocio
-│   ├── controller/       # Controladores REST
-│   ├── webhook/          # Servicio de WhatsApp
-│   ├── dto/              # DTOs para transferencia de datos
-│   └── config/           # Configuraciones
-└── src/main/resources/
-    └── application.properties
-```
-
-## Comandos Útiles
+### Variables de Entorno Requeridas
 
 ```bash
-# Compilar proyecto
+# Database Configuration
+SPRING_DATASOURCE_URL=jdbc:postgresql://host:port/database
+SPRING_DATASOURCE_USERNAME=username
+SPRING_DATASOURCE_PASSWORD=password
+
+# WhatsApp Cloud API Configuration
+WHATSAPP_ACCESS_TOKEN=token_de_acceso
+WHATSAPP_PHONE_NUMBER_ID=phone_number_id
+WHATSAPP_VERIFY_TOKEN=verify_token_seguro
+
+# CORS Configuration
+FRONTEND_URL=https://frontend-url.com
+
+# Server Configuration
+PORT=8080
+```
+
+### ⚠️ Seguridad - IMPORTANTE
+
+**Nunca commits información sensible:**
+- ❌ Tokens de acceso reales
+- ❌ Contraseñas de base de datos
+- ❌ API Keys
+- ❌ Secrets de producción
+- ❌ Credenciales de WhatsApp
+
+**Usa siempre:**
+- ✅ Variables de entorno (`.env` files)
+- ✅ Secrets de plataforma (Render, GitHub)
+- ✅ Archivos `.gitignore` apropiados
+- ✅ Tokens temporales para desarrollo
+
+## 🚀 Despliegue
+
+### Desarrollo Local
+
+**Prerequisitos:**
+- Java 17+
+- Maven 3.9+
+- PostgreSQL 14+
+
+**Pasos:**
+```bash
+# Clonar repositorio
+git clone [repo-url]
+cd backend
+
+# Configurar base de datos (ver sección Database Setup)
+
+# Ejecutar
+mvn spring-boot:run
+```
+
+**Acceso:** `http://localhost:8080`
+
+### Producción - Render
+
+**Preparación:**
+1. Código en GitHub (rama `main`)
+2. Variables de entorno configuradas
+3. Base de datos PostgreSQL creada
+
+**Pasos:**
+1. Crear "Web Service" en Render
+2. Conectar repositorio GitHub
+3. Configurar:
+   - Runtime: Docker
+   - Dockerfile Path: `./Dockerfile`
+4. Configurar variables de entorno
+5. Deploy automático
+
+**URL de producción:** `https://[service-name].onrender.com`
+
+## 📱 Integración WhatsApp Cloud API
+
+### Flujo del Chatbot
+
+```
+Usuario WhatsApp → "subir producto"
+       ↓
+Bot solicita: Nombre
+       ↓
+Usuario envía: "Esmeralda Colombiana 2ct"
+       ↓
+Bot solicita: Descripción
+       ↓
+Usuario envía: "Color verde intenso, 2 quilates..."
+       ↓
+Bot solicita: Precio (USD)
+       ↓
+Usuario envía: "2500"
+       ↓
+Bot solicita: Categoría
+       ↓
+Usuario envía: "Anillo"
+       ↓
+Bot solicita: Número WhatsApp contacto
+       ↓
+Usuario envía: "573001234567"
+       ↓
+Bot solicita: Imagen del producto
+       ↓
+Usuario envía foto 📷
+       ↓
+✅ Producto creado automáticamente
+       ↓
+Producto visible en frontend
+```
+
+### Comandos Disponibles
+
+- `subir producto` - Inicia creación de producto
+- `productos` / `catálogo` - Lista productos disponibles
+- `ayuda` - Muestra ayuda
+- `inicio` - Reinicia conversación
+
+### Configuración Meta
+
+**Pasos:**
+1. Crear cuenta en [Meta for Developers](https://developers.facebook.com)
+2. Crear nueva App (tipo Business)
+3. Agregar producto WhatsApp
+4. Configurar Webhook:
+   - URL: `https://[backend-url]/webhook`
+   - Verify Token: (generar token seguro)
+5. Suscribir a eventos: `messages`, `messaging_postbacks`
+6. Copiar credenciales:
+   - Phone Number ID
+   - Access Token (permanent o expirable)
+
+## 🧪 Testing
+
+### Health Check
+
+```bash
+curl https://[backend-url]/webhook/health
+```
+
+**Response esperado:**
+```json
+{
+  "status": "UP",
+  "service": "Esmeraldas WhatsApp Webhook"
+}
+```
+
+### Productos API
+
+```bash
+# Listar productos
+curl https://[backend-url]/api/products
+
+# Producto por ID
+curl https://[backend-url]/api/products/1
+
+# Crear producto
+curl -X POST https://[backend-url]/api/products \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Esmeralda","description":"Verde","price":2500,...}'
+```
+
+## 🔧 Desarrollo
+
+### Build
+
+```bash
+# Compilar
 mvn clean compile
+
+# Empaquetar
+mvn clean package
 
 # Ejecutar tests
 mvn test
 
-# Empaquetar para producción
-mvn clean package
-
-# Ejecutar JAR
-java -jar target/backend-1.0.0.jar
+# Instalar dependencias
+mvn clean install
 ```
 
-## Deploy en Render (Gratis)
+### Estructura de Paquetes
 
-1. Crea un archivo `render.yaml` en la raíz del proyecto
-2. Conecta tu repo de GitHub
-3. Render detectará automáticamente Spring Boot
-4. Configura las variables de entorno
-5. Deploy automático en cada push
+```
+com.esmeraldas.backend
+├── config          # Configuraciones globales
+├── controller      # Controladores REST (@RestController)
+├── dto            # Data Transfer Objects
+├── entity         # Entidades JPA (@Entity)
+├── repository     # Repositorios Spring Data
+├── service        # Servicios (@Service)
+└── webhook        # Servicios WhatsApp
+```
 
-Variables de entorno necesarias:
-- `DATABASE_URL`
-- `SPRING_DATASOURCE_USERNAME`
-- `SPRING_DATASOURCE_PASSWORD`
-- `WHATSAPP_PHONE_NUMBER_ID`
-- `WHATSAPP_ACCESS_TOKEN`
-- `WHATSAPP_VERIFY_TOKEN`
+## 📝 Notas de Implementación
+
+### Características Implementadas
+
+✅ API REST completa de productos
+✅ Integración WhatsApp Cloud API
+✅ Webhook funcional con chatbot
+✅ CRUD de productos
+✅ Búsqueda y filtrado
+✅ CORS configurado
+✅ Docker multi-stage build
+✅ Deployment en Render
+✅ Logging configurado
+
+### Próximas Mejoras (Roadmap)
+
+🔮 Fase 2:
+- [ ] Autenticación JWT
+- [ ] Panel de administración
+- [ ] Subida de imágenes desde WhatsApp
+- [ ] Categorías dinámicas
+
+🔮 Fase 3:
+- [ ] Carrito de compras
+- [ ] Pasarela de pagos
+- [ ] Sistema de pedidos
+- [ ] Notificaciones
+
+## 🐛 Troubleshooting
+
+### Problemas Comunes
+
+**Error: Connection refused**
+- Verificar que PostgreSQL esté corriendo
+- Confirmar URL de base de datos
+
+**Error: 404 en endpoints**
+- Verificar que el backend esté corriendo
+- Confirmar CORS configurado
+
+**WhatsApp no responde**
+- Verificar Access Token vigente
+- Confirmar Webhook URL correcta
+
+### Logs
+
+```bash
+# Ver logs en Render
+# Dashboard → Service → Logs
+
+# Logs locales
+tail -f backend.log
+```
+
+## 📄 Licencia
+
+Proprietary - Todos los derechos reservados
+© 2026 Victory Esmeraldas - David Montejo
+
+## 🔗 Recursos
+
+- [Spring Boot Documentation](https://spring.io/projects/spring-boot)
+- [WhatsApp Cloud API](https://developers.facebook.com/docs/whatsapp/cloud-api)
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
+- [Render Documentation](https://render.com/docs)
+
+---
+
+**Versión**: 1.0.0
+**Última actualización**: Febrero 2026
+**Autor**: David Montejo
+**Estado**: Production ✅
