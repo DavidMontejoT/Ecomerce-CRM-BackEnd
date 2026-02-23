@@ -237,10 +237,55 @@ Producto visible en frontend
 
 ### Comandos Disponibles
 
-- `subir producto` - Inicia creación de producto
-- `productos` / `catálogo` - Lista productos disponibles
-- `ayuda` - Muestra ayuda
-- `inicio` - Reinicia conversación
+#### Gestión de Productos
+- `subir producto` / `agregar producto` - Inicia creación de nuevo producto
+- `editar producto` / `modificar producto` - Edita un producto existente
+- `borrar producto` / `eliminar producto` - Elimina un producto del catálogo
+- `ver productos` - Lista todos los productos con detalles
+
+#### Comandos Generales
+- `ayuda` - Muestra ayuda y comandos disponibles
+- `inicio` / `empezar` - Reinicia conversación
+
+#### Flujo Completo de Edición
+
+```
+Usuario: "editar producto"
+       ↓
+Bot muestra lista de productos con IDs
+       ↓
+Usuario responde con ID del producto
+       ↓
+Bot pregunta: ¿Qué campo editar?
+  1️⃣ Nombre
+  2️⃣ Descripción
+  3️⃣ Precio
+  4️⃣ Categoría
+  5️⃣ Número WhatsApp
+  6️⃣ Imagen
+       ↓
+Usuario selecciona opción (1-6)
+       ↓
+Usuario envía nuevo valor
+       ↓
+✅ Producto actualizado
+```
+
+#### Flujo de Borrado
+
+```
+Usuario: "borrar producto"
+       ↓
+Bot muestra lista de productos con IDs
+       ↓
+Usuario responde con ID del producto
+       ↓
+Bot solicita confirmación (sí/no)
+       ↓
+Usuario confirma
+       ↓
+✅ Producto eliminado
+```
 
 ### Configuración Meta
 
@@ -325,7 +370,11 @@ com.esmeraldas.backend
 ✅ API REST completa de productos
 ✅ Integración WhatsApp Cloud API
 ✅ Webhook funcional con chatbot
-✅ CRUD de productos
+✅ CRUD de productos (Crear, Leer, Actualizar, Borrar)
+✅ Subida de imágenes desde WhatsApp
+✅ Edición de productos por WhatsApp (todos los campos incluyendo imagen)
+✅ Borrado de productos por WhatsApp
+✅ Listado de productos por WhatsApp
 ✅ Búsqueda y filtrado
 ✅ CORS configurado
 ✅ Docker multi-stage build
@@ -336,15 +385,17 @@ com.esmeraldas.backend
 
 🔮 Fase 2:
 - [ ] Autenticación JWT
-- [ ] Panel de administración
-- [ ] Subida de imágenes desde WhatsApp
+- [ ] Panel de administración web
 - [ ] Categorías dinámicas
+- [ ] Historial de cambios en productos
+- [ ] Edición masiva de productos
 
 🔮 Fase 3:
 - [ ] Carrito de compras
 - [ ] Pasarela de pagos
 - [ ] Sistema de pedidos
-- [ ] Notificaciones
+- [ ] Notificaciones automáticas
+- [ ] Reportes y estadísticas
 
 ## 🐛 Troubleshooting
 
