@@ -2,6 +2,7 @@ package com.esmeraldas.backend.webhook;
 
 import com.esmeraldas.backend.entity.Product;
 import com.esmeraldas.backend.repository.ProductRepository;
+import com.esmeraldas.backend.service.ImageService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class WhatsAppService {
 
     private final ProductRepository productRepository;
+    private final ImageService imageService;
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -165,33 +167,52 @@ public class WhatsAppService {
                        "6️⃣ **Imagen del producto**\n" +
                        "Por favor, envía la imagen del esmeralda.";
 
-            case 6: // Image - this will be handled separately
+            case 6: // Image - download and save from WhatsApp
                 if (image != null && !image.isEmpty()) {
-                    String imageUrl = image.path("url").asText();
-                    state.setImageUrl(imageUrl);
+                    String tempImageUrl = image.path("url").asText();
+                    log.info("Imagen recibida de WhatsApp, URL temporal: {}", tempImageUrl);
 
-                    // Save product to database
-                    Product product = new Product();
-                    product.setName(state.getName());
-                    product.setDescription(state.getDescription());
-                    product.setPrice(state.getPrice());
-                    product.setCategory(state.getCategory());
-                    product.setWhatsappNumber(state.getWhatsappNumber());
-                    product.setImageUrl(imageUrl);
-                    product.setAvailable(true);
-                    product.setStock(1);
+                    try {
+                        // First, save the product to get an ID
+                        Product product = new Product();
+                        product.setName(state.getName());
+                        product.setDescription(state.getDescription());
+                        product.setPrice(state.getPrice());
+                        product.setCategory(state.getCategory());
+                        product.setWhatsappNumber(state.getWhatsappNumber());
+                        product.setAvailable(true);
+                        product.setStock(1);
 
-                    productRepository.save(product);
+                        // Save to get the ID
+                        Product savedProduct = productRepository.save(product);
+                        log.info("Producto guardado con ID: {}", savedProduct.getId());
 
-                    // Clear conversation state
-                    conversationStates.remove(from);
+                        // Download and save image from WhatsApp
+                        String permanentImageUrl = imageService.downloadAndSaveImage(tempImageUrl, savedProduct.getId());
+                        log.info("Imagen descargada y guardada: {}", permanentImageUrl);
 
-                    return "✅ *¡Producto agregado exitosamente!*\n\n" +
-                           "📦 **" + state.getName() + "**\n" +
-                           "💰 Precio: $" + state.getPrice() + "\n" +
-                           "📝 " + state.getDescription() + "\n\n" +
-                           "Tu producto ya está visible en el catálogo.\n\n" +
-                           "👉 Para agregar otro producto, escribe 'subir producto'";
+                        // Update product with permanent image URL
+                        savedProduct.setImageUrl(permanentImageUrl);
+                        productRepository.save(savedProduct);
+                        log.info("Producto actualizado con imagen permanente");
+
+                        // Clear conversation state
+                        conversationStates.remove(from);
+
+                        return "✅ *¡Producto agregado exitosamente!*\n\n" +
+                               "📦 **" + state.getName() + "**\n" +
+                               "💰 Precio: $" + state.getPrice() + "\n" +
+                               "📝 " + state.getDescription() + "\n" +
+                               "📷 Imagen descargada y guardada\n\n" +
+                               "Tu producto ya está visible en el catálogo.\n\n" +
+                               "👉 Para agregar otro producto, escribe 'subir producto'";
+
+                    } catch (Exception e) {
+                        log.error("Error procesando imagen", e);
+                        conversationStates.remove(from);
+                        return "❌ Hubo un error al procesar la imagen. Por favor, intenta nuevamente escribiendo 'subir producto'.\n\n" +
+                               "Error: " + e.getMessage();
+                    }
                 } else {
                     return "❌ Por favor, envía una imagen.\n\n" +
                            "Si no tienes imagen, escribe 'omitir' para usar una imagen por defecto.";

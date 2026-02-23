@@ -42,3 +42,11 @@ Thumbs.db
 # Application
 application-local.properties
 application-prod.properties
+
+# Uploads
+uploads/
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.gif
