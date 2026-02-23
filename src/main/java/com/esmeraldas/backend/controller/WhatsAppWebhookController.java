@@ -13,7 +13,7 @@ import java.util.Map;
 
 @Slf4j
 @RestController
-@RequestMapping("/webhook")
+@RequestMapping("/api/webhook")
 @RequiredArgsConstructor
 public class WhatsAppWebhookController {
 
