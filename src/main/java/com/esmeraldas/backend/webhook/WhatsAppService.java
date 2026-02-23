@@ -253,7 +253,9 @@ public class WhatsAppService {
             requestBody.set("text", textNode);
 
             String jsonBody = objectMapper.writeValueAsString(requestBody);
-            log.info("Sending WhatsApp message to {}: {}", to, jsonBody);
+            log.info("Sending WhatsApp message to {}", to);
+            log.info("Request URL: {}", url);
+            log.info("Request JSON: {}", jsonBody);
 
             HttpEntity<String> request = new HttpEntity<>(jsonBody, headers);
             String response = restTemplate.postForObject(url, request, String.class);
